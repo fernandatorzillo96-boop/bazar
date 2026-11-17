@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bazar Água de Coco · Consulta de preço</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f1e9; --card:#fffdf9; --ink:#2b2621; --muted:#8a7f72; --line:#e6ddd0;
+    --accent:#1f5c5a; --accent-ink:#fff; --sale:#b5452e; --ok:#2f6b3f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:480px;margin:0 auto;padding:28px 20px 48px}
+  header{text-align:center;margin-bottom:22px}
+  .brand{font-family:"Cormorant Garamond",serif;font-size:30px;font-weight:600;letter-spacing:.02em;margin:0}
+  .sub{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+  .today{display:inline-block;margin-top:14px;font-size:13px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+  .today b{color:var(--sale);font-weight:600}
+  .scan{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:18px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font:600 17px Inter,sans-serif;cursor:pointer}
+  .scan svg{width:22px;height:22px}
+  .or{text-align:center;color:var(--muted);font-size:12px;margin:14px 0}
+  #f{display:flex;gap:8px}
+  #fcad{display:block}
+  input[type=text]{flex:1;min-width:0;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font:500 16px Inter,sans-serif;color:var(--ink)}
+  input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .go{padding:0 18px;border:1px solid var(--accent);border-radius:12px;background:transparent;color:var(--accent);font:600 15px Inter,sans-serif;cursor:pointer}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;text-align:center}
+  #status{margin-top:18px;font-size:14px;text-align:center;color:var(--muted);min-height:20px}
+  #status.err{color:var(--sale)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:18px}
+  .group{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+  .name{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:600;line-height:1.15;margin:6px 0 4px}
+  .meta{font-size:13px;color:var(--muted)}
+  .prices{margin-top:18px;border-top:1px solid var(--line);padding-top:16px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;font-size:15px}
+  .row .lbl{color:var(--muted)}
+  .strike{text-decoration:line-through;color:var(--muted)}
+  .final{margin-top:12px;padding:16px;border-radius:14px;background:var(--bg);display:flex;justify-content:space-between;align-items:center}
+  .final .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+  .final .lbl{white-space:nowrap;margin-right:12px}
+  .final > span:last-child{text-align:right}
+  .final .val{font-size:32px;font-weight:600;color:var(--ink);letter-spacing:-.01em}
+  .pill{display:inline-block;font-size:12px;font-weight:600;color:#fff;background:var(--sale);border-radius:999px;padding:3px 10px;margin-left:6px}
+  .extra{margin-top:12px;font-size:13px;color:var(--ok);background:#eef5ef;border-radius:10px;padding:10px 12px}
+  .noextra{margin-top:12px;font-size:13px;color:var(--muted)}
+  .skus{margin-top:14px;font-size:13px;color:var(--muted)}
+  .skus span{display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 8px;margin:4px 4px 0 0;color:var(--ink)}
+  .rules{margin-top:28px;font-size:13px;color:var(--muted)}
+  .rules h3{font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;margin:0 0 8px}
+  .rules li{margin:4px 0}
+  footer{margin-top:32px;text-align:center;font-size:11px;color:var(--muted)}
+  #file{display:none}
+
+  .gate h2{font-family:"Cormorant Garamond",serif;font-size:26px;font-weight:600;margin:0 0 6px;text-align:center}
+  .gate p.lead{text-align:center;color:var(--muted);font-size:14px;margin:0 0 20px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
+  .field input{width:100%}
+  .chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--ink);margin:10px 0}
+  .chk input{margin-top:2px;width:18px;height:18px;flex:none}
+  .chk a{color:var(--accent)}
+  .btn{width:100%;padding:16px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:600 16px Inter,sans-serif;cursor:pointer;margin-top:8px}
+  .btn[disabled]{opacity:.6}
+  .msg{font-size:13px;color:var(--sale);min-height:18px;margin-top:10px;text-align:center}
+  .equipe{display:block;text-align:center;margin-top:22px;font-size:12px;color:var(--muted);background:none;border:0;text-decoration:underline;cursor:pointer;width:100%}
+  .pinrow{display:none;gap:8px;margin-top:10px}
+  .hidden{display:none}
+  input[type=email],input[type=tel],input[type=password]{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font:500 16px Inter,sans-serif;color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="brand">Água de Coco</h1>
+    <div class="sub">Bazar · Consulta de preço</div>
+    <div class="today hidden" id="today"></div>
+  </header>
+
+  <!-- TELA 1: cadastro -->
+  <section id="gate" class="gate hidden">
+    <h2>Consulte os preços do bazar</h2>
+    <p class="lead">Cadastre-se uma vez para escanear as etiquetas e ver o preço de cada peça.</p>
+    <form id="fcad" novalidate>
+      <div class="field"><label for="email">E-mail</label><input id="email" type="email" autocomplete="email" inputmode="email" required></div>
+      <div class="field"><label for="tel">Celular com DDD</label><input id="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="(11) 99999-9999" required></div>
+      <label class="chk"><input id="priv" type="checkbox"> <span>Li e aceito o uso dos meus dados para acessar a consulta de preços<span id="pol"></span>.</span></label>
+      <label class="chk"><input id="optin" type="checkbox"> <span>Quero receber novidades e ofertas da Água de Coco por e-mail e WhatsApp.</span></label>
+      <button class="btn" id="bcad" type="submit">Acessar preços</button>
+      <div class="msg" id="mcad"></div>
+    </form>
+    <button class="equipe" id="beq" type="button">Sou da equipe da loja</button>
+    <form class="pinrow" id="fpin"><input id="pin" type="password" inputmode="numeric" placeholder="PIN da equipe" style="flex:1;min-width:0"><button class="go" type="submit">Entrar</button></form>
+  </section>
+
+  <!-- TELA 2: consulta -->
+  <section id="app" class="hidden">
+    <label class="scan" for="file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16.5 8v8"/></svg>
+      Escanear etiqueta
+    </label>
+    <input id="file" type="file" accept="image/*" capture="environment">
+    <div class="or">ou digite o código</div>
+    <form id="f">
+      <input id="code" type="text" autocomplete="off" autocapitalize="characters" placeholder="Referência ou código de barras">
+      <button class="go" type="submit">Buscar</button>
+    </form>
+    <div class="hint">Aproxime a câmera do código de barras, com boa luz.</div>
+    <div id="status"></div>
+    <div id="result"></div>
+    <div class="rules" id="rules"></div>
+  </section>
+
+  <div id="loading" style="text-align:center;color:var(--muted);font-size:14px;margin-top:30px">Carregando…</div>
+  <footer>Preços válidos somente para o bazar. Em caso de dúvida, chame uma vendedora.</footer>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzNH5zZTDI_hbxIPD-KhwC-psN-yDjWnC6tdv16LMTg0naZDekxPs-1Gg9yN9Zt5ZjpHQ/exec';
+const EVENTO = (new URLSearchParams(location.search).get('evento')||'').slice(0,30);
+async function post(body){ const r=await fetch(API,{method:'POST',body:JSON.stringify(body)}); const j=await r.json(); if(j.erro) throw new Error(j.erro); return j; }
+const KEY = 'adc_bazar_acesso';
+const $ = id => document.getElementById(id);
+const brl = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const norm = s => String(s||'').trim().toUpperCase();
+const digits = s => String(s||'').replace(/\D/g,'');
+let produtos=[], regras=[], HOJE='', byRef=new Map();
+
+function liberado(){ try{ return !!localStorage.getItem(KEY); }catch(_){ return !!window.__ok; } }
+function marcar(tipo){ window.__ok=true; try{ localStorage.setItem(KEY, tipo+'|'+Date.now()); }catch(_){} }
+
+function mostrar(){
+  $('loading').classList.add('hidden');
+  if(liberado()){ $('gate').classList.add('hidden'); $('app').classList.remove('hidden'); $('today').classList.remove('hidden'); }
+  else { $('gate').classList.remove('hidden'); $('app').classList.add('hidden'); }
+}
+
+// ---------- cadastro ----------
+$('tel').addEventListener('input', e=>{
+  let d=digits(e.target.value).slice(0,11), o=d;
+  if(d.length>2) o='('+d.slice(0,2)+') '+d.slice(2);
+  if(d.length>7) o='('+d.slice(0,2)+') '+d.slice(2,d.length-4)+'-'+d.slice(-4);
+  e.target.value=o;
+});
+$('fcad').addEventListener('submit', e=>{
+  e.preventDefault();
+  const email=$('email').value.trim(), tel=digits($('tel').value);
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return $('mcad').textContent='Confira o e-mail.';
+  if(tel.length<10) return $('mcad').textContent='Informe o celular com DDD.';
+  if(!$('priv').checked) return $('mcad').textContent='Marque o aceite para continuar.';
+  $('mcad').textContent=''; $('bcad').disabled=true; $('bcad').textContent='Enviando…';
+  post({acao:'cadastrar', email, telefone:tel, aceitePrivacidade:true, optIn:$('optin').checked, evento:EVENTO})
+    .then(()=>{ marcar('cliente'); mostrar(); })
+    .catch(err=>{ $('bcad').disabled=false; $('bcad').textContent='Acessar preços'; $('mcad').textContent=(err&&err.message)||'Não foi possível enviar. Tente de novo.'; });
+});
+$('beq').addEventListener('click', ()=>{ $('fpin').style.display='flex'; $('pin').focus(); });
+$('fpin').addEventListener('submit', e=>{
+  e.preventDefault();
+  post({acao:'pin', pin:$('pin').value}).then(j=>{ if(j.ok){ marcar('equipe'); mostrar(); } else { $('mcad').textContent='PIN incorreto.'; } }).catch(()=>{ $('mcad').textContent='Sem conexão. Tente de novo.'; });
+});
+
+// ---------- consulta ----------
+function regrasPara(grupo){
+  return regras.filter(r => r.inicio<=HOJE && HOJE<=r.fim && (!r.grupos.length || r.grupos.map(norm).includes(norm(grupo))));
+}
+function fmtData(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m; }
+function status(msg,err){ const s=$('status'); s.textContent=msg||''; s.className=err?'err':''; }
+
+function buscar(raw){
+  const q=String(raw||'').trim(); $('result').innerHTML=''; if(!q) return;
+  let lista = byRef.get(norm(q));
+  if(!lista){
+    const Q=norm(q).replace(/[^A-Z0-9]/g,''); let best='';
+    for(const k of byRef.keys()){ const kk=k.replace(/[^A-Z0-9]/g,''); if(kk.length>best.length && Q.startsWith(kk)) best=k; }
+    if(best) lista=byRef.get(best);
+  }
+  if(!lista){ status('Código '+q+' não encontrado. Confira com uma vendedora.', true); return; }
+  status(''); render(lista[0], lista);
+}
+
+function render(it, lista){
+  const rs=regrasPara(it.grupo);
+  const ex = rs.length ? rs.reduce((a,b)=>b.pct>a.pct?b:a) : null;
+  const final = ex ? Math.round(it.preco_bazar*(1-ex.pct/100)*100)/100 : it.preco_bazar;
+  const off = it.preco_de ? Math.round((1-final/it.preco_de)*100) : 0;
+  const cores = lista.length>1 ? '<div class="skus">Cores nesta referência:<br>'+lista.map(v=>'<span>'+esc(v.cor)+'</span>').join('')+'</div>' : '';
+  $('result').innerHTML =
+  '<div class="card"><div class="group">'+esc(it.grupo)+'</div><div class="name">'+esc(it.nome)+'</div>'+
+  '<div class="meta">'+esc([it.ref, lista.length===1?it.cor:''].filter(Boolean).join(' · '))+'</div><div class="prices">'+
+  (it.preco_de?'<div class="row"><span class="lbl">Preço original</span><span class="strike">'+brl(it.preco_de)+'</span></div>':'')+
+  '<div class="row"><span class="lbl">Preço bazar</span><span'+(ex?' class="strike"':'')+'>'+brl(it.preco_bazar)+'</span></div>'+
+  (ex?'<div class="row"><span class="lbl">Desconto extra hoje</span><span>−'+ex.pct+'%</span></div>':'')+
+  '<div class="final"><span class="lbl">Você paga</span><span><span class="val">'+brl(final)+'</span>'+(off>0?'<span class="pill">−'+off+'%</span>':'')+'</span></div>'+
+  (ex?'<div class="extra">'+esc(ex.texto||('Desconto extra de '+ex.pct+'% válido hoje'))+'</div>':'<div class="noextra">Sem desconto extra para esta peça hoje.</div>')+
+  '</div>'+cores+'</div>';
+  $('result').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function esc(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+$('f').addEventListener('submit', e=>{ e.preventDefault(); buscar($('code').value); $('code').blur(); });
+
+async function lerImagem(file){
+  if('BarcodeDetector' in window){
+    try{ const r=await new BarcodeDetector().detect(await createImageBitmap(file)); if(r&&r.length) return r[0].rawValue; }catch(_){}
+  }
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((ok,err)=>{const i=new Image(); i.onload=()=>ok(i); i.onerror=err; i.src=url;});
+    const s=Math.min(1,1600/Math.max(img.width,img.height)), c=document.createElement('canvas');
+    c.width=img.width*s; c.height=img.height*s; c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const hints=new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    const res=await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(c.toDataURL('image/jpeg',0.9));
+    return res.getText();
+  } finally { URL.revokeObjectURL(url); }
+}
+$('file').addEventListener('change', async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+  $('result').innerHTML=''; status('Lendo o código…');
+  try{ const code=await lerImagem(f); if(!code) throw 0; $('code').value=code; buscar(code); }
+  catch(_){ status('Não consegui ler o código. Tente mais perto e com mais luz, ou digite a referência.', true); }
+});
+
+fetch(API+'?api=dados').then(r=>r.json()).then(d=>{
+  if(d.politicaUrl){ const a=document.createElement('a'); a.href=d.politicaUrl; a.target='_blank'; a.rel='noopener'; a.textContent='Política de Privacidade'; $('pol').append(', conforme a ', a); }
+  produtos=d.produtos; regras=d.regras; HOJE=d.hoje;
+  for(const it of produtos){ const k=norm(it.ref); if(!byRef.has(k)) byRef.set(k,[]); byRef.get(k).push(it); }
+  const hoje=regras.filter(r=>r.inicio<=HOJE&&HOJE<=r.fim);
+  $('today').innerHTML='Hoje, '+fmtData(HOJE)+(hoje.length?' · <b>tem desconto extra</b>':'');
+  if(hoje.length) $('rules').innerHTML='<h3>Descontos extras de hoje</h3><ul>'+hoje.map(r=>'<li>'+esc(r.texto||('+'+r.pct+'%'))+(r.grupos.length?' ('+esc(r.grupos.join(', '))+')':'')+'</li>').join('')+'</ul>';
+  mostrar();
+}).catch(()=>{ $('loading').textContent='Não consegui carregar os preços. Recarregue a página.'; });
+</script>
+</body>
+</html>
