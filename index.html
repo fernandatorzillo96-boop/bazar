@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bazar Água de Coco · Consulta de preço</title>
+<title>Bazar Água de Coco Fortaleza · Consulta de preço</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
 <style>
@@ -75,7 +75,7 @@
 <div class="wrap">
   <header>
     <h1 class="brand">Água de Coco</h1>
-    <div class="sub">Bazar · Consulta de preço</div>
+    <div class="sub">Bazar Fortaleza · Consulta de preço</div>
     <div class="today hidden" id="today"></div>
   </header>
 
@@ -119,7 +119,7 @@
 
 <script>
 const API = 'https://script.google.com/macros/s/AKfycbzNH5zZTDI_hbxIPD-KhwC-psN-yDjWnC6tdv16LMTg0naZDekxPs-1Gg9yN9Zt5ZjpHQ/exec';
-const EVENTO = (new URLSearchParams(location.search).get('evento')||'').slice(0,30);
+const EVENTO = (new URLSearchParams(location.search).get('evento')||'Fortaleza').slice(0,30);
 async function post(body){ const r=await fetch(API,{method:'POST',body:JSON.stringify(body)}); const j=await r.json(); if(j.erro) throw new Error(j.erro); return j; }
 const KEY = 'adc_bazar_acesso';
 const $ = id => document.getElementById(id);
