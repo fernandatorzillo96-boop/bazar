@@ -104,7 +104,7 @@
     <input id="file" type="file" accept="image/*" capture="environment">
     <div class="or">ou digite o código</div>
     <form id="f">
-      <input id="code" type="text" autocomplete="off" autocapitalize="characters" placeholder="Referência ou código de barras">
+      <input id="code" type="text" autocomplete="off" autocapitalize="characters" placeholder="Código de barras ou referência">
       <button class="go" type="submit">Buscar</button>
     </form>
     <div class="hint">Aproxime a câmera do código de barras, com boa luz.</div>
@@ -126,7 +126,7 @@ const $ = id => document.getElementById(id);
 const brl = v => Number(v).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const norm = s => String(s||'').trim().toUpperCase();
 const digits = s => String(s||'').replace(/\D/g,'');
-let produtos=[], regras=[], HOJE='', byRef=new Map();
+let CAT={r:{},e:{}}, regras=[], HOJE='', porRef=new Map();
 
 function liberado(){ try{ return !!localStorage.getItem(KEY); }catch(_){ return !!window.__ok; } }
 function marcar(tipo){ window.__ok=true; try{ localStorage.setItem(KEY, tipo+'|'+Date.now()); }catch(_){} }
@@ -162,39 +162,58 @@ $('fpin').addEventListener('submit', e=>{
 });
 
 // ---------- consulta ----------
+const normG = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toUpperCase();
 function regrasPara(grupo){
-  return regras.filter(r => r.inicio<=HOJE && HOJE<=r.fim && (!r.grupos.length || r.grupos.map(norm).includes(norm(grupo))));
+  return regras.filter(r => r.inicio<=HOJE && HOJE<=r.fim && (!r.grupos.length || r.grupos.map(normG).includes(normG(grupo))));
 }
+function melhor(grupo){ const rs=regrasPara(grupo); return rs.length ? rs.reduce((a,b)=>b.pct>a.pct?b:a) : null; }
 function fmtData(iso){ const [y,m,d]=iso.split('-'); return d+'/'+m; }
 function status(msg,err){ const s=$('status'); s.textContent=msg||''; s.className=err?'err':''; }
+const ORD=['RN','PP/XS','PP','P/S','P','M/M','M','G/L','G','GG/XL','GG','XG','EXG'];
+function ordTam(a,b){ const ia=ORD.indexOf(a), ib=ORD.indexOf(b); if(ia>=0&&ib>=0) return ia-ib; const na=parseFloat(a), nb=parseFloat(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return a.localeCompare(b); }
 
 function buscar(raw){
   const q=String(raw||'').trim(); $('result').innerHTML=''; if(!q) return;
-  let lista = byRef.get(norm(q));
-  if(!lista){
-    const Q=norm(q).replace(/[^A-Z0-9]/g,''); let best='';
-    for(const k of byRef.keys()){ const kk=k.replace(/[^A-Z0-9]/g,''); if(kk.length>best.length && Q.startsWith(kk)) best=k; }
-    if(best) lista=byRef.get(best);
+  const d=digits(q).replace(/^0+/,'');
+  if(d.length>=8 && d===digits(q).replace(/^0+/,'') && /^\d+$/.test(q.replace(/\s/g,'')) && CAT.e[d]){
+    const s=CAT.e[d]; status(''); return render(s[0], [s], s);
   }
-  if(!lista){ status('Código '+q+' não encontrado. Confira com uma vendedora.', true); return; }
-  status(''); render(lista[0], lista);
+  let ref=norm(q);
+  if(!CAT.r[ref]){
+    const Q=ref.replace(/[^A-Z0-9]/g,''); let best='';
+    for(const k in CAT.r){ if(k.length>best.length && Q.startsWith(k)) best=k; }
+    ref=best;
+  }
+  if(!ref){ status('Código '+q+' não encontrado. Confira com uma vendedora.', true); return; }
+  status(''); render(ref, (porRef.get(ref)||[]).slice().sort((a,b)=>ordTam(a[1],b[1])), null);
 }
 
-function render(it, lista){
-  const rs=regrasPara(it.grupo);
-  const ex = rs.length ? rs.reduce((a,b)=>b.pct>a.pct?b:a) : null;
-  const final = ex ? Math.round(it.preco_bazar*(1-ex.pct/100)*100)/100 : it.preco_bazar;
-  const off = it.preco_de ? Math.round((1-final/it.preco_de)*100) : 0;
-  const cores = lista.length>1 ? '<div class="skus">Cores nesta referência:<br>'+lista.map(v=>'<span>'+esc(v.cor)+'</span>').join('')+'</div>' : '';
+function precoFinal(baz, ex){ return ex ? Math.round(baz*(1-ex.pct/100)*100)/100 : baz; }
+
+function render(ref, skus, sel){
+  const [nome, grupo] = CAT.r[ref];
+  const ex = melhor(grupo);
+  const base = sel || skus[0];
+  const unico = skus.every(s=>s[3]===base[3] && s[2]===base[2]);
+  const de = base[2], baz = base[3], final = precoFinal(baz, ex);
+  const off = de ? Math.round((1-final/de)*100) : 0;
+  let corpo;
+  if(sel || unico){
+    corpo =
+      (de?'<div class="row"><span class="lbl">Preço original</span><span class="strike">'+brl(de)+'</span></div>':'')+
+      '<div class="row"><span class="lbl">Preço bazar</span><span'+(ex?' class="strike"':'')+'>'+brl(baz)+'</span></div>'+
+      (ex?'<div class="row"><span class="lbl">Desconto extra hoje</span><span>−'+ex.pct+'%</span></div>':'')+
+      '<div class="final"><span class="lbl">Você paga</span><span><span class="val">'+brl(final)+'</span>'+(off>0?'<span class="pill">−'+off+'%</span>':'')+'</span></div>';
+  } else {
+    corpo = '<div class="row"><span class="lbl">O preço muda conforme o tamanho</span></div>' +
+      skus.map(s=>'<div class="row"><span class="lbl">Tam. '+esc(s[1])+'</span><span>'+(s[2]?'<span class="strike">'+brl(s[2])+'</span> ':'')+'<b>'+brl(precoFinal(s[3],ex))+'</b></span></div>').join('');
+  }
+  const tams = !sel && unico && skus.length>1 ? '<div class="skus">Tamanhos:<br>'+[...new Set(skus.map(s=>s[1]))].map(t=>'<span>'+esc(t)+'</span>').join('')+'</div>' : '';
   $('result').innerHTML =
-  '<div class="card"><div class="group">'+esc(it.grupo)+'</div><div class="name">'+esc(it.nome)+'</div>'+
-  '<div class="meta">'+esc([it.ref, lista.length===1?it.cor:''].filter(Boolean).join(' · '))+'</div><div class="prices">'+
-  (it.preco_de?'<div class="row"><span class="lbl">Preço original</span><span class="strike">'+brl(it.preco_de)+'</span></div>':'')+
-  '<div class="row"><span class="lbl">Preço bazar</span><span'+(ex?' class="strike"':'')+'>'+brl(it.preco_bazar)+'</span></div>'+
-  (ex?'<div class="row"><span class="lbl">Desconto extra hoje</span><span>−'+ex.pct+'%</span></div>':'')+
-  '<div class="final"><span class="lbl">Você paga</span><span><span class="val">'+brl(final)+'</span>'+(off>0?'<span class="pill">−'+off+'%</span>':'')+'</span></div>'+
+  '<div class="card"><div class="group">'+esc(grupo)+'</div><div class="name">'+esc(nome)+'</div>'+
+  '<div class="meta">'+esc([ref, sel&&sel[1]?'Tam. '+sel[1]:''].filter(Boolean).join(' · '))+'</div><div class="prices">'+corpo+
   (ex?'<div class="extra">'+esc(ex.texto||('Desconto extra de '+ex.pct+'% válido hoje'))+'</div>':'<div class="noextra">Sem desconto extra para esta peça hoje.</div>')+
-  '</div>'+cores+'</div>';
+  '</div>'+tams+'</div>';
   $('result').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function esc(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -222,10 +241,15 @@ $('file').addEventListener('change', async e=>{
   catch(_){ status('Não consegui ler o código. Tente mais perto e com mais luz, ou digite a referência.', true); }
 });
 
-fetch(API+'?api=dados').then(r=>r.json()).then(d=>{
+const hojeLocal = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+Promise.all([
+  fetch('catalogo.json').then(r=>{ if(!r.ok) throw 0; return r.json(); }),
+  fetch(API+'?api=dados').then(r=>r.json()).catch(()=>({regras:[], hoje:hojeLocal}))
+]).then(([cat, d])=>{
+  CAT=cat;
+  for(const e in CAT.e){ const s=CAT.e[e], k=s[0]; if(!porRef.has(k)) porRef.set(k,[]); porRef.get(k).push(s); }
   if(d.politicaUrl){ const a=document.createElement('a'); a.href=d.politicaUrl; a.target='_blank'; a.rel='noopener'; a.textContent='Política de Privacidade'; $('pol').append(', conforme a ', a); }
-  produtos=d.produtos; regras=d.regras; HOJE=d.hoje;
-  for(const it of produtos){ const k=norm(it.ref); if(!byRef.has(k)) byRef.set(k,[]); byRef.get(k).push(it); }
+  regras=d.regras||[]; HOJE=d.hoje||hojeLocal;
   const hoje=regras.filter(r=>r.inicio<=HOJE&&HOJE<=r.fim);
   $('today').innerHTML='Hoje, '+fmtData(HOJE)+(hoje.length?' · <b>tem desconto extra</b>':'');
   if(hoje.length) $('rules').innerHTML='<h3>Descontos extras de hoje</h3><ul>'+hoje.map(r=>'<li>'+esc(r.texto||('+'+r.pct+'%'))+(r.grupos.length?' ('+esc(r.grupos.join(', '))+')':'')+'</li>').join('')+'</ul>';
